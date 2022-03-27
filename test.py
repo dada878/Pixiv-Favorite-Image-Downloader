@@ -1,3 +1,2 @@
-body = {"works":[]}
-
-print(not body["works"])
+for i in range(5):
+    print(i)
