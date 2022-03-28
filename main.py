@@ -1,3 +1,4 @@
+import threading
 import requests
 import re
 
@@ -11,6 +12,7 @@ headers = {'user-agent': user_agent}
 
 class toolbox:
     def download_image(url,file_path):
+        print(f"download start : {file_path}")
         with open(file_path,'wb') as f:
             response = requests.get(url)
             f.write(response.content)
@@ -19,8 +21,13 @@ class toolbox:
     def saved_file_name(file_name):
         return re.sub(r'[/\\:*?"<>|]*', '', file_name)
 
+threads = []
+
 #連結網頁
 def geturl(userid,start):
+
+    global threads
+
     root = requests.get("https://www.pixiv.net/ajax/user/"+str(userid)+"/illusts/bookmarks?tag=&offset="+str(start)+"&limit=48&rest=show&lang=zh_tw",cookies=cookie,headers=headers)
 
     works = root.json()["body"]["works"]
@@ -32,15 +39,21 @@ def geturl(userid,start):
         ImageName = toolbox.saved_file_name(work["title"])
         if work["pageCount"] > 1:
             for i in range(work["pageCount"]):
-                toolbox.download_image(
+                threads.append(threading.Thread(target=toolbox.download_image, args=(
                     f'https://pixiv.cat/{str(work["id"])}-{str(i+1)}.jpg',
-                    f"image/{ImageName}.png"
-                )
+                    f"image/{ImageName}-{str(i)}.jpg"
+                )))
         else:
-            toolbox.download_image(
+            threads.append(threading.Thread(target=toolbox.download_image, args=(
                 f'https://pixiv.cat/{str(work["id"])}.jpg',
-                f"image/{ImageName}.png"
-            )
+                f"image/{ImageName}.jpg"
+            )))
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    threads = []
 
     return False
 
